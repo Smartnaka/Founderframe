@@ -226,4 +226,4 @@ export const generateSlideImage = async (visualPrompt: string): Promise<string> 
       throw new Error(`Failed to generate image: ${error.message}`);
     }
   });
-    }
+};
