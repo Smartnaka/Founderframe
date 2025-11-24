@@ -32,7 +32,8 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
  * Analyzes a raw startup idea to extract structured market insights.
  */
 export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> => {
-  const modelId = "gemini-2.5-flash"; // Efficient for structured reasoning
+  // Using Pro model for deeper strategic reasoning and VC-persona simulation
+  const modelId = "gemini-3-pro-preview";
 
   const schema: Schema = {
     type: Type.OBJECT,
@@ -114,7 +115,8 @@ export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> 
  * Generates a pitch deck structure based on the market analysis.
  */
 export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide[]> => {
-  const modelId = "gemini-2.5-flash";
+  // Using Pro model for better copy and structure
+  const modelId = "gemini-3-pro-preview";
 
   const schema: Schema = {
     type: Type.ARRAY,
@@ -135,6 +137,7 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
   const prompt = `
     Create a professional 8-10 slide pitch deck based on this market analysis.
     The tone should be persuasive, clear, and investor-ready.
+    Keep content concise, impactful, and avoid 'walls of text'.
     
     Market Analysis Context:
     ${JSON.stringify(analysis)}
@@ -173,7 +176,8 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
  * Generates an image for a slide based on a visual description.
  */
 export const generateSlideImage = async (visualPrompt: string): Promise<string> => {
-  const modelId = "gemini-2.5-flash-image";
+  // Using Pro Image model for high-resolution, production-quality assets
+  const modelId = "gemini-3-pro-image-preview";
 
   const enhancedPrompt = `
     Create a professional, high-quality, modern flat-vector illustration suitable for a startup pitch deck.
@@ -191,7 +195,8 @@ export const generateSlideImage = async (visualPrompt: string): Promise<string> 
         },
         config: {
           imageConfig: {
-            aspectRatio: "1:1"
+            aspectRatio: "1:1",
+            imageSize: "1K" // Ensuring high resolution
           }
         }
       });

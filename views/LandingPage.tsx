@@ -55,16 +55,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-                <span className="text-xs md:text-sm font-medium text-brand-100 uppercase tracking-wide">AI Strategic Assistant v2.0</span>
+                <span className="text-xs md:text-sm font-medium text-brand-100 uppercase tracking-wide">Enterprise-Grade Strategy Engine</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
-                Build your startup <br className="hidden md:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200">faster than ever.</span>
+                Launch your startup <br className="hidden md:block" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 via-white to-blue-200">with AI precision.</span>
             </h1>
             
             <p className="text-lg md:text-2xl text-brand-100 max-w-2xl mb-12 leading-relaxed font-light">
-                FounderFrame transforms your raw ideas into structured market insights and professional pitch decks instantly using advanced AI.
+                FounderFrame transforms your raw ideas into structured market insights and professional pitch decks instantly using advanced Gemini Pro models.
             </p>
             
             <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto">
@@ -72,7 +72,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     onClick={onGetStarted}
                     className="w-full md:w-auto group flex items-center justify-center space-x-3 bg-white text-brand-700 hover:bg-brand-50 px-8 py-4 rounded-full text-lg font-bold transition-all shadow-[0_20px_50px_-12px_rgba(255,255,255,0.3)] hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.5)] transform hover:-translate-y-1"
                 >
-                    <span>Start Building for Free</span>
+                    <span>Start Building Now</span>
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                 </button>
                 <button className="w-full md:w-auto flex items-center justify-center space-x-2 px-8 py-4 rounded-full text-lg font-medium text-white border border-white/20 hover:bg-white/10 transition-all">
@@ -105,7 +105,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px] group-hover:backdrop-blur-none transition-all">
                         <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl text-white font-mono text-sm shadow-xl flex items-center gap-3">
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                            Initializing Strategy Engine...
+                            Analyzing Market Dynamics...
                         </div>
                     </div>
                 </div>
@@ -245,7 +245,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         <FaqItem question="Do you own my startup idea?" answer="Absolutely not. Your data is processed securely and we claim no ownership over the intellectual property generated within the platform. Your ideas remain 100% yours." />
                      </div>
                      <div className="p-2">
-                        <FaqItem question="Is this tool free?" answer="Yes, FounderFrame is currently free to use during our beta period. You can generate unlimited strategies and pitch decks." />
+                        <FaqItem question="Is this tool free?" answer="Yes, FounderFrame is currently free to use. You can generate unlimited strategies and pitch decks." />
                      </div>
                 </div>
              </div>
