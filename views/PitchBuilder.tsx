@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Slide, SlideLayout, PitchTheme } from '../types';
-import { Monitor, ChevronRight, Image as ImageIcon, Loader2, RefreshCw, Sparkles, Plus, Trash2, Edit3, LayoutTemplate, AlignLeft, AlignCenter, Image, ChevronUp, ChevronDown, Palette } from 'lucide-react';
+import { Monitor, ChevronRight, Image as ImageIcon, Loader2, RefreshCw, Sparkles, Plus, Trash2, Edit3, LayoutTemplate, AlignLeft, AlignCenter, ChevronUp, ChevronDown, Palette } from 'lucide-react';
 
 interface PitchBuilderProps {
   slides: Slide[];
@@ -94,7 +94,7 @@ export const PitchBuilder: React.FC<PitchBuilderProps> = ({
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col md:flex-row overflow-hidden bg-slate-50">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden bg-slate-50">
       
       {/* Responsive Sidebar */}
       <div className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-row md:flex-col flex-shrink-0 z-20 shadow-sm md:shadow-none h-16 md:h-full overflow-x-auto md:overflow-y-auto scrollbar-hide md:scrollbar-default">
@@ -196,7 +196,7 @@ export const PitchBuilder: React.FC<PitchBuilderProps> = ({
                    className={`p-2 rounded-md transition-all ${activeSlide.layout === 'image_left' ? 'bg-slate-100 text-slate-900' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'}`}
                    title="Visual Focus"
                  >
-                   <Image size={18} />
+                   <ImageIcon size={18} />
                  </button>
                  <button 
                    onClick={() => handleLayoutChange('minimal')}

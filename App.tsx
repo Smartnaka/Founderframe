@@ -32,9 +32,13 @@ export default function App() {
     theme: DEFAULT_THEME
   });
 
-  // Scroll to top on step change
+  // Scroll to top on step change (relevant for internal scroll containers)
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Reset scroll of the scrollable container if it exists
+    const scrollContainer = document.getElementById('main-scroll-container');
+    if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+    }
   }, [currentStep]);
 
   const handleAnalyzeIdea = async (idea: string) => {
@@ -105,7 +109,6 @@ export default function App() {
         setCurrentStep(AppStep.PITCH);
 
         // Automatically trigger image generation for all slides
-        // We don't await this here so the UI remains responsive
         generateAllSlideImages(slidesWithLoading);
 
     } catch (err: any) {
@@ -116,7 +119,6 @@ export default function App() {
 
   const handleGenerateImage = async (slideId: string, prompt: string) => {
     setError(null);
-    // Set loading state
     setState(prev => ({
       ...prev,
       pitchDeck: prev.pitchDeck.map(slide => 
@@ -181,7 +183,6 @@ export default function App() {
   };
 
   const handleStepClick = (step: AppStep) => {
-      // Only allow navigating backwards or to completed steps
       setCurrentStep(step);
   };
 
@@ -194,7 +195,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+    <div className="h-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden">
       
       {/* Global Error Toast */}
       {error && (
@@ -213,51 +214,59 @@ export default function App() {
         />
       )}
 
-      <main className="flex-grow flex flex-col h-full">
-        {currentStep === AppStep.IDEA && (
-          <IdeaInput 
-            initialIdea={state.ideaRaw} 
-            onAnalyze={handleAnalyzeIdea} 
-            isLoading={state.isAnalyzing} 
-          />
+      <main className="flex-grow flex flex-col relative overflow-hidden">
+        {/* Scrollable Container for standard content pages */}
+        {(currentStep === AppStep.IDEA || currentStep === AppStep.INSIGHTS || currentStep === AppStep.EXPORT) && (
+            <div id="main-scroll-container" className="h-full w-full overflow-y-auto">
+                <div className="min-h-full flex flex-col">
+                    {currentStep === AppStep.IDEA && (
+                    <IdeaInput 
+                        initialIdea={state.ideaRaw} 
+                        onAnalyze={handleAnalyzeIdea} 
+                        isLoading={state.isAnalyzing} 
+                    />
+                    )}
+
+                    {currentStep === AppStep.INSIGHTS && state.analysis && (
+                    <MarketInsights 
+                        analysis={state.analysis}
+                        onContinue={handleBuildPitch}
+                        isGeneratingPitch={state.isGeneratingPitch}
+                    />
+                    )}
+
+                    {currentStep === AppStep.EXPORT && (
+                    <ExportView 
+                        slides={state.pitchDeck}
+                        analysis={state.analysis}
+                        theme={state.theme}
+                        onBack={() => setCurrentStep(AppStep.PITCH)}
+                    />
+                    )}
+                    
+                    <footer className="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto">
+                        <p>© {new Date().getFullYear()} FounderFrame. Powered by Gemini.</p>
+                    </footer>
+                </div>
+            </div>
         )}
 
-        {currentStep === AppStep.INSIGHTS && state.analysis && (
-          <MarketInsights 
-            analysis={state.analysis}
-            onContinue={handleBuildPitch}
-            isGeneratingPitch={state.isGeneratingPitch}
-          />
-        )}
-
+        {/* Fixed Container for Application Views (Pitch Builder) */}
         {currentStep === AppStep.PITCH && (
-          <PitchBuilder 
-            slides={state.pitchDeck}
-            theme={state.theme}
-            onExport={handleExportClick}
-            onGenerateImage={handleGenerateImage}
-            onUpdateSlide={handleUpdateSlide}
-            onMoveSlide={handleMoveSlide}
-            onDeleteSlide={handleDeleteSlide}
-            onThemeChange={handleThemeChange}
-          />
-        )}
-
-        {currentStep === AppStep.EXPORT && (
-          <ExportView 
-            slides={state.pitchDeck}
-            analysis={state.analysis}
-            theme={state.theme}
-            onBack={() => setCurrentStep(AppStep.PITCH)}
-          />
+            <div className="h-full w-full overflow-hidden">
+                <PitchBuilder 
+                    slides={state.pitchDeck}
+                    theme={state.theme}
+                    onExport={handleExportClick}
+                    onGenerateImage={handleGenerateImage}
+                    onUpdateSlide={handleUpdateSlide}
+                    onMoveSlide={handleMoveSlide}
+                    onDeleteSlide={handleDeleteSlide}
+                    onThemeChange={handleThemeChange}
+                />
+            </div>
         )}
       </main>
-
-      {currentStep !== AppStep.PITCH && currentStep !== AppStep.EXPORT && (
-        <footer className="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto">
-          <p>© {new Date().getFullYear()} FounderFrame. Powered by Gemini.</p>
-        </footer>
-      )}
     </div>
   );
 }

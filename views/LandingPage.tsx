@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, TrendingUp, Layout, PieChart, Zap, ShieldCheck, Rocket, Star, CheckCircle, ChevronDown, ChevronUp, Users, Lightbulb, PlayCircle, Hexagon } from 'lucide-react';
+import { ArrowRight, TrendingUp, Layout, PieChart, Zap, Rocket, Star, ChevronDown, ChevronUp, Lightbulb, PlayCircle, Hexagon } from 'lucide-react';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -25,9 +25,9 @@ const FaqItem = ({ question, answer }: { question: string, answer: string }) => 
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-white animate-fade-in font-sans">
+    <div className="h-full overflow-y-auto flex flex-col bg-white animate-fade-in font-sans">
       {/* Hero Section with Gradient */}
-      <div className="relative bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 text-white overflow-hidden">
+      <div className="relative bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 text-white overflow-hidden shrink-0">
         {/* Abstract Shapes/Background Pattern */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
             <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white blur-3xl"></div>
@@ -114,7 +114,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Trusted By Strip */}
-      <div className="bg-slate-50 border-b border-slate-200 py-10 overflow-hidden">
+      <div className="bg-slate-50 border-b border-slate-200 py-10 overflow-hidden shrink-0">
             <div className="max-w-6xl mx-auto px-4">
                 <p className="text-center text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">Empowering founders from next-gen companies</p>
                 <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
@@ -128,7 +128,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Features Grid */}
-      <div className="max-w-6xl mx-auto px-4 py-24">
+      <div className="max-w-6xl mx-auto px-4 py-24 shrink-0">
           <div className="text-center mb-20">
               <span className="text-brand-600 font-semibold tracking-wide uppercase text-sm">Why FounderFrame?</span>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-4">Everything you need to validate & pitch</h2>
@@ -163,7 +163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* How It Works (Dark Section) */}
-      <div className="bg-slate-900 text-white py-24 relative overflow-hidden">
+      <div className="bg-slate-900 text-white py-24 relative overflow-hidden shrink-0">
              {/* Background accents */}
              <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500 rounded-full blur-[128px] opacity-20 -mr-20 -mt-20"></div>
              <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500 rounded-full blur-[96px] opacity-20 -ml-10 -mb-10"></div>
@@ -201,7 +201,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Testimonials */}
-      <div className="py-24 max-w-6xl mx-auto px-4 bg-white">
+      <div className="py-24 max-w-6xl mx-auto px-4 bg-white shrink-0">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-16">Don't just take our word for it</h2>
             <div className="grid md:grid-cols-3 gap-8">
                 {[
@@ -227,7 +227,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-slate-50 py-24 border-t border-slate-200">
+      <div className="bg-slate-50 py-24 border-t border-slate-200 shrink-0">
              <div className="max-w-3xl mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h2>
@@ -252,7 +252,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
       {/* Bottom CTA */}
-      <div className="bg-white py-24 border-t border-slate-200">
+      <div className="bg-white py-24 border-t border-slate-200 shrink-0">
         <div className="max-w-4xl mx-auto px-4 text-center">
             <div className="inline-block p-4 bg-brand-50 rounded-3xl mb-8">
                 <div className="w-16 h-16 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
@@ -271,7 +271,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       </div>
 
        {/* Footer */}
-       <div className="border-t border-slate-200 py-12 bg-slate-50">
+       <div className="border-t border-slate-200 py-12 bg-slate-50 shrink-0">
             <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-slate-400 text-sm">
                 <div className="flex items-center space-x-2 mb-4 md:mb-0">
                      <div className="w-6 h-6 bg-brand-600 rounded flex items-center justify-center text-white font-bold text-xs">F</div>

@@ -1,14 +1,22 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MarketAnalysis, Slide } from "../types";
 
-// Ensure API key is available and safe to access in browser environments
-const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
+// Lazy initialization to prevent runtime crashes during app load
+let aiInstance: GoogleGenAI | null = null;
 
-if (!apiKey) {
-  console.warn("API_KEY is missing. Please set it in your environment variables (e.g. Vercel Project Settings).");
-}
-
-const ai = new GoogleGenAI({ apiKey });
+const getAI = (): GoogleGenAI => {
+  if (!aiInstance) {
+    // Ensure API key is available and safe to access in browser environments
+    const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
+    
+    if (!apiKey) {
+      console.warn("API_KEY is missing. Please set it in your environment variables.");
+    }
+    
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+};
 
 /**
  * Retry utility for transient API errors
@@ -35,6 +43,7 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
 export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> => {
   // Using Pro model for deeper strategic reasoning and VC-persona simulation
   const modelId = "gemini-3-pro-preview";
+  const ai = getAI();
 
   const schema: Schema = {
     type: Type.OBJECT,
@@ -118,6 +127,7 @@ export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> 
 export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide[]> => {
   // Using Pro model for better copy and structure
   const modelId = "gemini-3-pro-preview";
+  const ai = getAI();
 
   const schema: Schema = {
     type: Type.ARRAY,
@@ -179,6 +189,7 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
 export const generateSlideImage = async (visualPrompt: string): Promise<string> => {
   // Using Pro Image model for high-resolution, production-quality assets
   const modelId = "gemini-3-pro-image-preview";
+  const ai = getAI();
 
   const enhancedPrompt = `
     Create a professional, high-quality, modern flat-vector illustration suitable for a startup pitch deck.
