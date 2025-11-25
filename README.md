@@ -32,6 +32,7 @@ FounderFrame is an AI-powered strategic assistant that helps entrepreneurs trans
 - **Visualization**: Recharts
 - **Export Tools**: jsPDF, html2canvas
 - **Icons**: Lucide React
+- **Build Tool**: Vite (Recommended for production)
 
 ## Setup
 
@@ -47,16 +48,20 @@ FounderFrame is an AI-powered strategic assistant that helps entrepreneurs trans
 
 ## Deployment
 
-### Vercel
+### Vercel (Production)
 
-1. **Push your code** to a Git repository (GitHub, GitLab, etc.).
+To deploy successfully to Vercel, follow these steps:
+
+1. **Push your code** to a Git repository.
 2. **Import project** into Vercel.
 3. **Environment Variables**:
    - Go to **Settings** > **Environment Variables**.
    - Add a new variable:
      - **Key**: `API_KEY`
      - **Value**: `Your_Actual_Gemini_API_Key_Here` (starts with `AIza...`)
-   - ⚠️ **Important**: If using Vite, you may need to prefix variables (e.g., `VITE_API_KEY`) and update the code, or configure your bundler to expose `process.env.API_KEY`. For this codebase, ensure your build process defines `process.env.API_KEY`.
+
+4. **Vite Configuration**:
+   A `vite.config.ts` file is included in the project to ensure `API_KEY` is correctly exposed to your application. If you are using a different build system, ensure you configure it to replace `process.env.API_KEY` with the actual value during the build process.
 
 ## Usage Guide
 

@@ -2,12 +2,9 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MarketAnalysis, Slide } from "../types";
 
 const getAI = (): GoogleGenAI => {
-  // Ensure API key is available and safe to access in browser environments
-  const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
-  
-  // Always create a new instance to ensure we use the latest API key
-  // This is crucial for environments where the key is injected dynamically (like AI Studio)
-  return new GoogleGenAI({ apiKey });
+  // Use process.env.API_KEY directly as per guidelines.
+  // The key's availability is handled externally.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 /**

@@ -292,16 +292,23 @@ export default function App() {
     if (configError) {
       return (
         <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full border border-red-200">
              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600">
                <Settings size={32} />
              </div>
              <h2 className="text-2xl font-bold text-slate-900 mb-3">Configuration Error</h2>
-             <p className="text-slate-600 mb-6 leading-relaxed">
-               The API Key is missing or invalid. If you are running this app locally or in production (e.g., Vercel), you must set the environment variable.
+             <p className="text-slate-600 mb-4 leading-relaxed">
+               The application cannot find the <code>API_KEY</code> environment variable.
              </p>
-             <div className="bg-slate-100 p-4 rounded-lg text-left text-sm font-mono text-slate-700 mb-6 break-all">
-                API_KEY=AIza...
+             <div className="bg-slate-100 p-4 rounded-lg text-left text-sm text-slate-700 mb-6 space-y-2">
+                <p className="font-semibold text-slate-900">For Vercel Deployments:</p>
+                <ol className="list-decimal pl-5 space-y-1">
+                  <li>Go to your Project Settings on Vercel.</li>
+                  <li>Click on <strong>Environment Variables</strong>.</li>
+                  <li>Add <strong>Key:</strong> <code>API_KEY</code></li>
+                  <li>Add <strong>Value:</strong> <code>your-gemini-api-key</code></li>
+                  <li>Redeploy your project.</li>
+                </ol>
              </div>
              <button 
                onClick={() => setConfigError(false)}
