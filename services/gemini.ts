@@ -1,14 +1,14 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MarketAnalysis, Slide } from "../types";
 
-// Better API key handling for production
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.API_KEY || '';
+// Ensure API key is available and safe to access in browser environments
+const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
 
 if (!apiKey) {
-  console.error("CRITICAL: API_KEY is missing. Please set VITE_GEMINI_API_KEY in your environment variables.");
+  console.warn("API_KEY is missing. Please set it in your environment variables (e.g. Vercel Project Settings).");
 }
 
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const ai = new GoogleGenAI({ apiKey });
 
 /**
  * Retry utility for transient API errors
@@ -19,8 +19,10 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
   } catch (error: any) {
     if (retries <= 0) throw error;
     
+    // Log retry attempt
     console.warn(`Operation failed, retrying... (${retries} attempts left). Error: ${error.message}`);
     
+    // Wait with exponential backoff
     await new Promise(resolve => setTimeout(resolve, delay));
     
     return retryOperation(operation, retries - 1, delay * 2);
@@ -31,10 +33,7 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
  * Analyzes a raw startup idea to extract structured market insights.
  */
 export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> => {
-  if (!ai) {
-    throw new Error("API key not configured. Please set VITE_GEMINI_API_KEY environment variable.");
-  }
-
+  // Using Pro model for deeper strategic reasoning and VC-persona simulation
   const modelId = "gemini-3-pro-preview";
 
   const schema: Schema = {
@@ -106,9 +105,9 @@ export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> 
       if (!text) throw new Error("No response from AI");
       
       return JSON.parse(text) as MarketAnalysis;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Gemini Analysis Error:", error);
-      throw new Error(`Failed to analyze idea: ${error.message}`);
+      throw error; // Re-throw for retry
     }
   });
 };
@@ -117,10 +116,7 @@ export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> 
  * Generates a pitch deck structure based on the market analysis.
  */
 export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide[]> => {
-  if (!ai) {
-    throw new Error("API key not configured. Please set VITE_GEMINI_API_KEY environment variable.");
-  }
-
+  // Using Pro model for better copy and structure
   const modelId = "gemini-3-pro-preview";
 
   const schema: Schema = {
@@ -165,13 +161,14 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
 
       const parsedSlides = JSON.parse(text) as Omit<Slide, 'layout'>[];
       
+      // Add default layout to each slide
       return parsedSlides.map(slide => ({
         ...slide,
         layout: 'default'
       })) as Slide[];
-    } catch (error: any) {
+    } catch (error) {
       console.error("Gemini Pitch Gen Error:", error);
-      throw new Error(`Failed to generate pitch deck: ${error.message}`);
+      throw error;
     }
   });
 };
@@ -180,10 +177,7 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
  * Generates an image for a slide based on a visual description.
  */
 export const generateSlideImage = async (visualPrompt: string): Promise<string> => {
-  if (!ai) {
-    throw new Error("API key not configured. Please set VITE_GEMINI_API_KEY environment variable.");
-  }
-
+  // Using Pro Image model for high-resolution, production-quality assets
   const modelId = "gemini-3-pro-image-preview";
 
   const enhancedPrompt = `
@@ -203,7 +197,7 @@ export const generateSlideImage = async (visualPrompt: string): Promise<string> 
         config: {
           imageConfig: {
             aspectRatio: "1:1",
-            imageSize: "1K"
+            imageSize: "1K" // Ensuring high resolution
           }
         }
       });
@@ -214,6 +208,7 @@ export const generateSlideImage = async (visualPrompt: string): Promise<string> 
             return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
           }
         }
+        // Log if we got content but no image (e.g. model refusal or text response)
         const textPart = response.candidates[0].content.parts.find(p => p.text);
         if (textPart) {
           console.warn("Gemini returned text instead of image:", textPart.text);
@@ -221,9 +216,9 @@ export const generateSlideImage = async (visualPrompt: string): Promise<string> 
       }
       
       throw new Error("No image data found in response");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Gemini Image Gen Error:", error);
-      throw new Error(`Failed to generate image: ${error.message}`);
+      throw error;
     }
   });
 };
