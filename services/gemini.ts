@@ -14,15 +14,29 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
   try {
     return await operation();
   } catch (error: any) {
-    // If it's an auth error or client error (4xx), don't retry, just throw
-    if (error.message?.includes("API key") || error.message?.includes("403") || error.status === 403) {
+    const msg = error.message || '';
+    const isQuota = msg.includes("429") || msg.includes("quota") || msg.includes("resource_exhausted");
+    const isAuth = msg.includes("API key") || msg.includes("403") || error.status === 403;
+
+    // If it's an auth error, don't retry.
+    if (isAuth) {
       throw error;
+    }
+
+    // If it's a quota error, we might want to retry once with a longer delay, 
+    // but generally this means we should stop. However, for 429 (rate limit), 
+    // backoff often helps.
+    if (isQuota && retries > 1) {
+       console.warn(`Quota/Rate limit hit. Waiting longer... (${retries} attempts left).`);
+       // Wait significantly longer for quota errors (e.g. 2s, 4s...)
+       await new Promise(resolve => setTimeout(resolve, delay * 2));
+       return retryOperation(operation, retries - 1, delay * 3);
     }
 
     if (retries <= 0) throw error;
     
-    // Log retry attempt
-    console.warn(`Operation failed, retrying... (${retries} attempts left). Error: ${error.message}`);
+    // Log retry attempt for standard errors
+    console.warn(`Operation failed, retrying... (${retries} attempts left). Error: ${msg}`);
     
     // Wait with exponential backoff
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -35,8 +49,9 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
  * Analyzes a raw startup idea to extract structured market insights.
  */
 export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> => {
-  // Using Pro model for deeper strategic reasoning and VC-persona simulation
-  const modelId = "gemini-3-pro-preview";
+  // Switching to Flash model for higher quota limits and faster response times
+  // while maintaining excellent JSON structuring capabilities.
+  const modelId = "gemini-2.5-flash";
   const ai = getAI();
 
   const schema: Schema = {
@@ -119,8 +134,8 @@ export const analyzeStartupIdea = async (idea: string): Promise<MarketAnalysis> 
  * Generates a pitch deck structure based on the market analysis.
  */
 export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide[]> => {
-  // Using Pro model for better copy and structure
-  const modelId = "gemini-3-pro-preview";
+  // Using Flash model for speed and efficiency
+  const modelId = "gemini-2.5-flash";
   const ai = getAI();
 
   const schema: Schema = {
@@ -182,6 +197,7 @@ export const generatePitchDeck = async (analysis: MarketAnalysis): Promise<Slide
  */
 export const generateSlideImage = async (visualPrompt: string): Promise<string> => {
   // Using Pro Image model for high-resolution, production-quality assets
+  // Note: This model is more expensive/rate-limited than text models.
   const modelId = "gemini-3-pro-image-preview";
   const ai = getAI();
 

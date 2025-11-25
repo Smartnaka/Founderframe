@@ -7,7 +7,7 @@ import { MarketInsights } from './views/MarketInsights';
 import { PitchBuilder } from './views/PitchBuilder';
 import { ExportView } from './views/Export';
 import { LandingPage } from './views/LandingPage';
-import { AlertTriangle, Key, Settings } from 'lucide-react';
+import { AlertTriangle, Key, Settings, ZapOff } from 'lucide-react';
 
 const DEFAULT_THEME: PitchTheme = {
   id: 'blue',
@@ -23,6 +23,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [needsApiKey, setNeedsApiKey] = useState(false);
   const [configError, setConfigError] = useState(false);
+  const [quotaError, setQuotaError] = useState(false);
 
   const [state, setState] = useState<StartupState>({
     ideaRaw: '',
@@ -56,6 +57,7 @@ export default function App() {
         setNeedsApiKey(false);
         setError(null);
         setConfigError(false);
+        setQuotaError(false);
       } catch (e) {
         console.error("Failed to select key", e);
       }
@@ -74,7 +76,13 @@ export default function App() {
   const handleApiError = async (err: any) => {
     const errorMessage = err.message || '';
     
-    // Check for specific error indicating invalid/missing project/key in this env
+    // 1. Quota / Rate Limit Errors (429)
+    if (errorMessage.includes("429") || errorMessage.includes("quota") || errorMessage.includes("resource_exhausted")) {
+       setQuotaError(true);
+       return true;
+    }
+
+    // 2. Auth / Missing Key Errors
     if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API key")) {
        if ((window as any).aistudio) {
          setNeedsApiKey(true);
@@ -92,6 +100,7 @@ export default function App() {
   const handleAnalyzeIdea = async (idea: string) => {
     setState(prev => ({ ...prev, isAnalyzing: true, ideaRaw: idea }));
     setError(null);
+    setQuotaError(false);
     try {
       const analysis = await analyzeStartupIdea(idea);
       setState(prev => ({ 
@@ -111,8 +120,8 @@ export default function App() {
   };
 
   const generateAllSlideImages = async (slides: Slide[]) => {
-    // Process in batches of 3 to avoid rate limits/overloading the model
-    const BATCH_SIZE = 3;
+    // REDUCED BATCH SIZE TO 1: To prevent hitting rate limits (429) on free/standard tiers.
+    const BATCH_SIZE = 1;
     const slidesToProcess = [...slides];
 
     for (let i = 0; i < slidesToProcess.length; i += BATCH_SIZE) {
@@ -129,6 +138,7 @@ export default function App() {
           }));
         } catch (err) {
           console.error(`Failed to generate image for slide ${slide.id}`, err);
+          // Don't show global error for background image gen failures, just stop loader
           setState(prev => ({
             ...prev,
             pitchDeck: prev.pitchDeck.map(s => 
@@ -137,6 +147,11 @@ export default function App() {
           }));
         }
       }));
+      
+      // Add a small delay between batches to be nice to the API
+      if (i + BATCH_SIZE < slidesToProcess.length) {
+         await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
   };
 
@@ -144,6 +159,7 @@ export default function App() {
     if (!state.analysis) return;
     setState(prev => ({ ...prev, isGeneratingPitch: true }));
     setError(null);
+    setQuotaError(false);
     try {
         const slides = await generatePitchDeck(state.analysis);
         
@@ -173,6 +189,7 @@ export default function App() {
 
   const handleGenerateImage = async (slideId: string, prompt: string) => {
     setError(null);
+    setQuotaError(false);
     setState(prev => ({
       ...prev,
       pitchDeck: prev.pitchDeck.map(slide => 
@@ -199,7 +216,7 @@ export default function App() {
           }));
           setError(err.message || "Failed to generate image.");
       } else {
-           // If handled (needs API key), reset loading state
+           // If handled (quota or auth), reset loading state
            setState(prev => ({
             ...prev,
             pitchDeck: prev.pitchDeck.map(slide => 
@@ -262,7 +279,33 @@ export default function App() {
 
   // Render blocking API Key view if needed and we are trying to use the app
   const renderApiKeyOverlay = () => {
-    // 1. AI Studio Case: API Key Selection UI
+    // 1. Quota Error Overlay (Priority)
+    if (quotaError) {
+      return (
+        <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-amber-200 animate-fade-in">
+             <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6 text-amber-600">
+               <ZapOff size={32} />
+             </div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-3">Quota Exceeded</h2>
+             <p className="text-slate-600 mb-6 leading-relaxed">
+               You've hit the usage limit for the Gemini API. This is common on free tier accounts.
+             </p>
+             <div className="text-sm bg-slate-50 p-4 rounded-lg text-slate-500 mb-6">
+               Please wait a few minutes before trying again, or check your billing status in Google AI Studio.
+             </div>
+             <button 
+               onClick={() => setQuotaError(false)}
+               className="w-full bg-slate-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-800 transition-colors shadow-lg"
+             >
+               Dismiss & Try Later
+             </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. AI Studio Case: API Key Selection UI
     if (needsApiKey && currentStep !== AppStep.LANDING) {
       return (
         <div className="absolute inset-0 z-50 bg-slate-50/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
@@ -288,7 +331,7 @@ export default function App() {
       );
     }
 
-    // 2. Deployment/Local Case: Configuration Error
+    // 3. Deployment/Local Case: Configuration Error
     if (configError) {
       return (
         <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
@@ -347,7 +390,7 @@ export default function App() {
     <div className="h-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
       
       {/* Global Error Toast */}
-      {error && !needsApiKey && !configError && (
+      {error && !needsApiKey && !configError && !quotaError && (
           <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg z-50 flex items-center animate-bounce">
             <AlertTriangle className="mr-2" size={20}/>
             <span>{error}</span>
