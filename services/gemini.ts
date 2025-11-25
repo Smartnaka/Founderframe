@@ -1,21 +1,13 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { MarketAnalysis, Slide } from "../types";
 
-// Lazy initialization to prevent runtime crashes during app load
-let aiInstance: GoogleGenAI | null = null;
-
 const getAI = (): GoogleGenAI => {
-  if (!aiInstance) {
-    // Ensure API key is available and safe to access in browser environments
-    const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
-    
-    if (!apiKey) {
-      console.warn("API_KEY is missing. Please set it in your environment variables.");
-    }
-    
-    aiInstance = new GoogleGenAI({ apiKey });
-  }
-  return aiInstance;
+  // Ensure API key is available and safe to access in browser environments
+  const apiKey = (typeof process !== "undefined" ? process.env.API_KEY : undefined) || '';
+  
+  // Always create a new instance to ensure we use the latest API key
+  // This is crucial for environments where the key is injected dynamically (like AI Studio)
+  return new GoogleGenAI({ apiKey });
 };
 
 /**
@@ -25,6 +17,11 @@ async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay
   try {
     return await operation();
   } catch (error: any) {
+    // If it's an auth error or client error (4xx), don't retry, just throw
+    if (error.message?.includes("API key") || error.message?.includes("403") || error.status === 403) {
+      throw error;
+    }
+
     if (retries <= 0) throw error;
     
     // Log retry attempt

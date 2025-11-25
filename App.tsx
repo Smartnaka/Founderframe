@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppStep, StartupState, Slide, PitchTheme } from './types';
 import { analyzeStartupIdea, generatePitchDeck, generateSlideImage } from './services/gemini';
@@ -8,7 +7,7 @@ import { MarketInsights } from './views/MarketInsights';
 import { PitchBuilder } from './views/PitchBuilder';
 import { ExportView } from './views/Export';
 import { LandingPage } from './views/LandingPage';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Key, Settings } from 'lucide-react';
 
 const DEFAULT_THEME: PitchTheme = {
   id: 'blue',
@@ -22,6 +21,8 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.LANDING);
   const [completedSteps, setCompletedSteps] = useState<AppStep[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [needsApiKey, setNeedsApiKey] = useState(false);
+  const [configError, setConfigError] = useState(false);
 
   const [state, setState] = useState<StartupState>({
     ideaRaw: '',
@@ -32,6 +33,35 @@ export default function App() {
     theme: DEFAULT_THEME
   });
 
+  // Check for API key on mount if in AI Studio environment
+  useEffect(() => {
+    const checkApiKey = async () => {
+      const aiStudio = (window as any).aistudio;
+      if (aiStudio) {
+        const hasKey = await aiStudio.hasSelectedApiKey();
+        if (!hasKey) {
+          setNeedsApiKey(true);
+        }
+      }
+    };
+    checkApiKey();
+  }, []);
+
+  const handleConnectKey = async () => {
+    const aiStudio = (window as any).aistudio;
+    if (aiStudio) {
+      try {
+        await aiStudio.openSelectKey();
+        // Assume success to avoid race condition with environment variable injection
+        setNeedsApiKey(false);
+        setError(null);
+        setConfigError(false);
+      } catch (e) {
+        console.error("Failed to select key", e);
+      }
+    }
+  };
+
   // Scroll to top on step change (relevant for internal scroll containers)
   useEffect(() => {
     // Reset scroll of the scrollable container if it exists
@@ -40,6 +70,24 @@ export default function App() {
         scrollContainer.scrollTop = 0;
     }
   }, [currentStep]);
+
+  const handleApiError = async (err: any) => {
+    const errorMessage = err.message || '';
+    
+    // Check for specific error indicating invalid/missing project/key in this env
+    if (errorMessage.includes("Requested entity was not found") || errorMessage.includes("API key")) {
+       if ((window as any).aistudio) {
+         setNeedsApiKey(true);
+         setError("Please select a valid paid API Key to continue.");
+         return true; // handled
+       } else {
+         // Not in AI Studio, but API key is missing or invalid
+         setConfigError(true);
+         return true; // handled
+       }
+    }
+    return false; // not handled
+  };
 
   const handleAnalyzeIdea = async (idea: string) => {
     setState(prev => ({ ...prev, isAnalyzing: true, ideaRaw: idea }));
@@ -54,7 +102,10 @@ export default function App() {
       setCompletedSteps(prev => [...new Set([...prev, AppStep.IDEA])]);
       setCurrentStep(AppStep.INSIGHTS);
     } catch (err: any) {
-      setError(err.message || "Failed to analyze idea.");
+      const handled = await handleApiError(err);
+      if (!handled) {
+        setError(err.message || "Failed to analyze idea.");
+      }
       setState(prev => ({ ...prev, isAnalyzing: false }));
     }
   };
@@ -112,7 +163,10 @@ export default function App() {
         generateAllSlideImages(slidesWithLoading);
 
     } catch (err: any) {
-        setError(err.message || "Failed to generate pitch.");
+        const handled = await handleApiError(err);
+        if (!handled) {
+            setError(err.message || "Failed to generate pitch.");
+        }
         setState(prev => ({ ...prev, isGeneratingPitch: false }));
     }
   };
@@ -135,13 +189,24 @@ export default function App() {
         )
       }));
     } catch (err: any) {
-      setState(prev => ({
-        ...prev,
-        pitchDeck: prev.pitchDeck.map(slide => 
-          slide.id === slideId ? { ...slide, isLoadingImage: false } : slide
-        )
-      }));
-      setError(err.message || "Failed to generate image.");
+      const handled = await handleApiError(err);
+      if (!handled) {
+          setState(prev => ({
+            ...prev,
+            pitchDeck: prev.pitchDeck.map(slide => 
+              slide.id === slideId ? { ...slide, isLoadingImage: false } : slide
+            )
+          }));
+          setError(err.message || "Failed to generate image.");
+      } else {
+           // If handled (needs API key), reset loading state
+           setState(prev => ({
+            ...prev,
+            pitchDeck: prev.pitchDeck.map(slide => 
+              slide.id === slideId ? { ...slide, isLoadingImage: false } : slide
+            )
+          }));
+      }
     }
   };
 
@@ -187,18 +252,95 @@ export default function App() {
   };
 
   const handleGetStarted = () => {
-      setCurrentStep(AppStep.IDEA);
+      if (needsApiKey) {
+          // If key is missing, trigger selection instead of navigation
+          handleConnectKey();
+      } else {
+          setCurrentStep(AppStep.IDEA);
+      }
+  };
+
+  // Render blocking API Key view if needed and we are trying to use the app
+  const renderApiKeyOverlay = () => {
+    // 1. AI Studio Case: API Key Selection UI
+    if (needsApiKey && currentStep !== AppStep.LANDING) {
+      return (
+        <div className="absolute inset-0 z-50 bg-slate-50/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
+             <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-600">
+               <Key size={32} />
+             </div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-3">API Key Required</h2>
+             <p className="text-slate-600 mb-8 leading-relaxed">
+               To use the advanced AI features of FounderFrame, please connect your Gemini API key from Google AI Studio.
+             </p>
+             <button 
+               onClick={handleConnectKey}
+               className="w-full bg-brand-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-brand-700 transition-colors shadow-lg hover:shadow-brand-500/30 flex items-center justify-center space-x-2"
+             >
+               <span>Connect Gemini API Key</span>
+             </button>
+             <p className="mt-4 text-xs text-slate-400">
+               You will be asked to select a Google Cloud Project with billing enabled. <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Learn more</a>
+             </p>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Deployment/Local Case: Configuration Error
+    if (configError) {
+      return (
+        <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200">
+             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-600">
+               <Settings size={32} />
+             </div>
+             <h2 className="text-2xl font-bold text-slate-900 mb-3">Configuration Error</h2>
+             <p className="text-slate-600 mb-6 leading-relaxed">
+               The API Key is missing or invalid. If you are running this app locally or in production (e.g., Vercel), you must set the environment variable.
+             </p>
+             <div className="bg-slate-100 p-4 rounded-lg text-left text-sm font-mono text-slate-700 mb-6 break-all">
+                API_KEY=AIza...
+             </div>
+             <button 
+               onClick={() => setConfigError(false)}
+               className="w-full bg-slate-200 text-slate-800 font-bold py-3 px-6 rounded-lg hover:bg-slate-300 transition-colors"
+             >
+               Close and Retry
+             </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   if (currentStep === AppStep.LANDING) {
-    return <LandingPage onGetStarted={handleGetStarted} />;
+    return (
+        <>
+            <LandingPage onGetStarted={handleGetStarted} />
+            {needsApiKey && (
+                <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+                    <button 
+                        onClick={handleConnectKey}
+                        className="bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center space-x-2 hover:bg-slate-800 transition-colors"
+                    >
+                        <Key size={14} />
+                        <span>Connect API Key</span>
+                    </button>
+                </div>
+            )}
+        </>
+    );
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <div className="h-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden relative">
       
       {/* Global Error Toast */}
-      {error && (
+      {error && !needsApiKey && !configError && (
           <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg z-50 flex items-center animate-bounce">
             <AlertTriangle className="mr-2" size={20}/>
             <span>{error}</span>
@@ -215,6 +357,9 @@ export default function App() {
       )}
 
       <main className="flex-grow flex flex-col relative overflow-hidden">
+        {/* API Key Blocker for Main App */}
+        {renderApiKeyOverlay()}
+
         {/* Scrollable Container for standard content pages */}
         {(currentStep === AppStep.IDEA || currentStep === AppStep.INSIGHTS || currentStep === AppStep.EXPORT) && (
             <div id="main-scroll-container" className="h-full w-full overflow-y-auto">

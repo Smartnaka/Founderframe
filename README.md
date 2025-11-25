@@ -37,13 +37,26 @@ FounderFrame is an AI-powered strategic assistant that helps entrepreneurs trans
 
 1. **Environment Variables**:
    Ensure you have a valid Google Gemini API Key.
-   Set `API_KEY` in your environment variables.
+   The app expects the key to be available via `process.env.API_KEY`.
 
 2. **Dependencies**:
    The project uses standard React dependencies. Ensure `node_modules` are installed via `npm install`.
 
 3. **Running**:
    Start the development server using `npm start` (or your preferred bundler command).
+
+## Deployment
+
+### Vercel
+
+1. **Push your code** to a Git repository (GitHub, GitLab, etc.).
+2. **Import project** into Vercel.
+3. **Environment Variables**:
+   - Go to **Settings** > **Environment Variables**.
+   - Add a new variable:
+     - **Key**: `API_KEY`
+     - **Value**: `Your_Actual_Gemini_API_Key_Here` (starts with `AIza...`)
+   - ⚠️ **Important**: If using Vite, you may need to prefix variables (e.g., `VITE_API_KEY`) and update the code, or configure your bundler to expose `process.env.API_KEY`. For this codebase, ensure your build process defines `process.env.API_KEY`.
 
 ## Usage Guide
 
