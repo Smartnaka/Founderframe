@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Loader2, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle } from 'lucide-react';
+import { Loader2, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
 interface AuthViewProps {
   initialMode?: 'login' | 'signup';
@@ -15,25 +16,28 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, register } = useAuth();
+  // New state for verification flow
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  
+  const { login, register, resendVerification } = useAuth();
 
   const handleFirebaseError = (err: any) => {
     let friendlyMessage = "An unexpected error occurred.";
     if (err.message) {
       if (err.message.includes("auth/email-already-in-use")) {
-        friendlyMessage = "This email is already registered. Please log in or use a different email.";
+        friendlyMessage = "This email is already registered. Please log in.";
       } else if (err.message.includes("auth/invalid-email")) {
         friendlyMessage = "Please enter a valid email address.";
-      } else if (err.message.includes("auth/operation-not-allowed")) {
-        friendlyMessage = "Email/Password authentication is not enabled. Please contact support.";
+      } else if (err.message.includes("verify your email")) {
+        friendlyMessage = "Email not verified. Please check your inbox.";
+        setNeedsVerification(true); // Trigger UI to show Resend button
       } else if (err.message.includes("auth/configuration-not-found")) {
-        friendlyMessage = "Configuration Error: Please enable 'Email/Password' in Firebase Console -> Authentication -> Sign-in method.";
+        friendlyMessage = "Configuration Error: Please enable 'Email/Password' in Firebase Console.";
       } else if (err.message.includes("auth/weak-password")) {
         friendlyMessage = "Password should be at least 6 characters.";
       } else if (err.message.includes("Invalid email or password")) {
         friendlyMessage = "Invalid email or password. Please try again.";
-      } else if (err.message.includes("User with this email already exists")) { // From userService custom error
-        friendlyMessage = "This email is already registered. Please log in or use a different email.";
       } else {
         friendlyMessage = err.message;
       }
@@ -44,22 +48,69 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
     setIsSubmitting(true);
 
     try {
       if (isLogin) {
         await login(email, password);
+        onSuccess();
       } else {
         if (!name.trim()) throw new Error("Name is required");
         await register(name, email, password);
+        setVerificationSent(true); // Switch to success view
       }
-      onSuccess();
     } catch (err: any) {
       handleFirebaseError(err);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleResend = async () => {
+      setError('');
+      setIsSubmitting(true);
+      try {
+          await resendVerification(email, password);
+          setVerificationSent(true);
+          setNeedsVerification(false);
+      } catch (err: any) {
+          setError(err.message || "Failed to resend.");
+      } finally {
+          setIsSubmitting(false);
+      }
+  };
+
+  // --- SUCCESS VIEW: VERIFICATION SENT ---
+  if (verificationSent) {
+      return (
+        <div className="min-h-full flex flex-col items-center justify-center p-4 bg-slate-50 animate-fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
+                    <CheckCircle size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">Verification Email Sent</h2>
+                <p className="text-slate-600 mb-6">
+                    We've sent a confirmation link to <span className="font-semibold text-slate-800">{email}</span>.
+                </p>
+                <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-500 mb-6">
+                    Please check your inbox (and spam folder) and click the link to activate your account before logging in.
+                </div>
+                <button 
+                    onClick={() => {
+                        setVerificationSent(false);
+                        setIsLogin(true); // Switch to login mode
+                        setNeedsVerification(false);
+                        setPassword(''); // Clear password for security
+                    }}
+                    className="w-full bg-slate-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                    Back to Login
+                </button>
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div className="min-h-full flex flex-col items-center justify-center p-4 bg-slate-50 animate-fade-in">
@@ -84,9 +135,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center">
-                <AlertCircle size={16} className="mr-2 flex-shrink-0" />
-                {error}
+              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm flex flex-col items-start gap-2">
+                <div className="flex items-center">
+                    <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+                    <span>{error}</span>
+                </div>
+                {needsVerification && (
+                    <button 
+                        type="button"
+                        onClick={handleResend}
+                        className="text-xs font-bold underline hover:text-red-800 flex items-center mt-1 ml-6"
+                    >
+                        <RefreshCw size={12} className="mr-1"/> Resend Verification Email
+                    </button>
+                )}
               </div>
             )}
 
@@ -163,6 +225,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
                   setError('');
                   setEmail('');
                   setPassword('');
+                  setNeedsVerification(false);
                 }}
                 className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
               >

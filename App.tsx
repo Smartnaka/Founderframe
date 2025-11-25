@@ -10,7 +10,7 @@ import { ExportView } from './views/Export';
 import { LandingPage } from './views/LandingPage';
 import { AuthView } from './views/AuthView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { AlertTriangle, Key, Settings, ZapOff } from 'lucide-react';
+import { AlertTriangle, Key, Settings, ZapOff, Mail, RefreshCw, LogOut } from 'lucide-react';
 
 const DEFAULT_THEME: PitchTheme = {
   id: 'blue',
@@ -27,9 +27,10 @@ const AppContent: React.FC = () => {
   const [needsApiKey, setNeedsApiKey] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [quotaError, setQuotaError] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Auth State
-  const { user, logout } = useAuth();
+  const { user, logout, checkVerification, resendVerification } = useAuth();
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
 
   const [state, setState] = useState<StartupState>({
@@ -318,9 +319,70 @@ const AppContent: React.FC = () => {
       }));
   };
 
+  const handleCheckVerification = async () => {
+      setIsVerifying(true);
+      try {
+          const verified = await checkVerification();
+          if (verified) {
+             setError(null); 
+          } else {
+             setError("Email not verified yet. Please check your inbox.");
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsVerifying(false);
+      }
+  };
+
   // Render blocking API Key view if needed and we are trying to use the app
   const renderApiKeyOverlay = () => {
-    // 1. Quota Error Overlay (Priority)
+    // 0. Verification Overlay (Top Priority for Authenticated Users)
+    if (user && !user.emailVerified) {
+        return (
+            <div className="absolute inset-0 z-[60] bg-slate-50 flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+                <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
+                        <Mail size={32} />
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-3">Check your inbox</h2>
+                    <p className="text-slate-600 mb-6 leading-relaxed">
+                        We sent a verification link to <span className="font-semibold text-slate-900">{user.email}</span>. 
+                        Please click the link to activate your account.
+                    </p>
+                    
+                    <div className="space-y-4">
+                        <button 
+                            onClick={handleCheckVerification}
+                            disabled={isVerifying}
+                            className="w-full bg-brand-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-brand-700 transition-colors shadow-lg flex items-center justify-center space-x-2"
+                        >
+                            <RefreshCw size={18} className={isVerifying ? "animate-spin" : ""} />
+                            <span>I've Verified My Email</span>
+                        </button>
+                        
+                        <div className="flex justify-between items-center text-sm pt-4 border-t border-slate-100">
+                             <button 
+                                onClick={() => resendVerification(user.email, '')}
+                                className="text-brand-600 hover:text-brand-800 font-medium"
+                             >
+                                Resend Email
+                             </button>
+                             <button 
+                                onClick={handleLogout}
+                                className="text-slate-400 hover:text-slate-600 flex items-center space-x-1"
+                             >
+                                <LogOut size={14} />
+                                <span>Sign Out</span>
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 1. Quota Error Overlay
     if (quotaError) {
       return (
         <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
@@ -454,7 +516,7 @@ const AppContent: React.FC = () => {
       )}
 
       <main className="flex-grow flex flex-col relative overflow-hidden">
-        {/* API Key Blocker for Main App */}
+        {/* Blocking Overlays (Verification, API Key, Quota) */}
         {renderApiKeyOverlay()}
 
         {/* Scrollable Container for standard content pages */}

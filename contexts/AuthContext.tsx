@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
 import { userService } from '../services/userService';
@@ -10,6 +11,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  resendVerification: (email: string, password: string) => Promise<void>;
+  checkVerification: () => Promise<boolean>;
   logout: () => void;
   deleteAccount: (uid: string) => Promise<void>;
 }
@@ -24,46 +27,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in.
-        // 1. Try to fetch their full profile from Firestore.
-        // 2. If that fails (e.g. permission error), fall back to basic Auth data.
         try {
           const userProfile = await userService.getUserProfile(firebaseUser.uid);
           if (userProfile) {
-            setUser(userProfile);
+            setUser({ ...userProfile, emailVerified: firebaseUser.emailVerified });
           } else {
-            // Profile not found in Firestore (maybe created but write failed)
             setUser({
               id: firebaseUser.uid,
               name: firebaseUser.displayName || 'User',
-              email: firebaseUser.email || ''
+              email: firebaseUser.email || '',
+              emailVerified: firebaseUser.emailVerified
             });
           }
         } catch (error) {
-          console.warn("Error fetching user profile from Firestore (using Auth fallback):", error);
-          // Fallback mechanism for permission errors
+          console.warn("Error fetching user profile (using Auth fallback):", error);
           setUser({
              id: firebaseUser.uid,
              name: firebaseUser.displayName || 'User',
-             email: firebaseUser.email || ''
+             email: firebaseUser.email || '',
+             emailVerified: firebaseUser.emailVerified
           });
         }
       } else {
-        // User is signed out
         setUser(null);
       }
       setIsLoading(false);
     });
 
-    // Clean up the subscription
     return () => unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const loggedInUser = await userService.authenticateUser(email, password);
-      setUser(loggedInUser);
+      await userService.authenticateUser(email, password);
+      // setUser handled by listener
     } finally {
       setIsLoading(false);
     }
@@ -72,30 +70,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      const newUser = await userService.createUser(name, email, password);
-      setUser(newUser); // Firebase Auth state change will also trigger this
+      await userService.createUser(name, email, password);
+      // setUser handled by listener (user stays logged in now)
     } finally {
       setIsLoading(false);
     }
   };
 
+  const resendVerification = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+        await userService.resendVerificationEmail(email, password);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const checkVerification = async (): Promise<boolean> => {
+      if (auth.currentUser) {
+          await userService.reloadUser();
+          // Update local state to reflect change
+          const isVerified = auth.currentUser.emailVerified;
+          if (user) {
+              setUser(prev => prev ? { ...prev, emailVerified: isVerified } : null);
+          }
+          return isVerified;
+      }
+      return false;
+  };
+
   const logout = async () => {
     await userService.logoutUser();
-    // setUser will be handled by onAuthStateChanged listener
   };
 
   const deleteAccount = async (uid: string) => {
     setIsLoading(true);
     try {
       await userService.deleteUserAccount(uid);
-      // setUser will be handled by onAuthStateChanged listener after delete
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, deleteAccount }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, resendVerification, checkVerification, logout, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );

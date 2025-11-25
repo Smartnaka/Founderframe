@@ -1,34 +1,38 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, User as FirebaseAuthUser } from 'firebase/auth';
+
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendEmailVerification, User as FirebaseAuthUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { User } from '../types';
 
 export const userService = {
-  async createUser(name: string, email: string, password: string): Promise<User> {
+  async createUser(name: string, email: string, password: string): Promise<void> {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
       // Update the Auth profile with the name immediately.
-      // This ensures we have the name available even if Firestore writes fail due to permissions.
       await updateProfile(firebaseUser, { displayName: name });
 
       const newUser: User = {
         id: firebaseUser.uid,
         name,
         email,
+        emailVerified: false // Initially false
       };
 
       // Attempt to store additional user profile data in Firestore.
-      // We wrap this in a try-catch so that if the database rules block the write,
-      // the user can still successfully register and use the app.
       try {
         await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
       } catch (dbError) {
         console.warn("Firestore write failed (likely permission issues), but Auth succeeded.", dbError);
       }
 
-      return newUser;
+      // Send Verification Email
+      await sendEmailVerification(firebaseUser);
+
+      // Note: We do NOT sign out here anymore. 
+      // We let the user stay logged in so the UI can guide them to verify.
+
     } catch (error: any) {
       if (error.code === 'auth/email-already-in-use') {
         throw new Error('User with this email already exists.');
@@ -42,11 +46,14 @@ export const userService = {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
+      // Note: We do NOT block login for unverified users here anymore.
+      // We return the user (with emailVerified status) and let the App UI handle the blocking overlay.
+
       // Try to get profile from Firestore
       try {
         const userProfile = await userService.getUserProfile(firebaseUser.uid);
         if (userProfile) {
-          return userProfile;
+          return { ...userProfile, emailVerified: firebaseUser.emailVerified };
         }
       } catch (dbError) {
          console.warn("Could not fetch Firestore profile, falling back to Auth data.");
@@ -56,7 +63,8 @@ export const userService = {
       return {
         id: firebaseUser.uid,
         name: firebaseUser.displayName || 'User',
-        email: firebaseUser.email || ''
+        email: firebaseUser.email || '',
+        emailVerified: firebaseUser.emailVerified
       };
 
     } catch (error: any) {
@@ -67,12 +75,41 @@ export const userService = {
     }
   },
 
+  async resendVerificationEmail(email: string, password: string): Promise<void> {
+    try {
+        // If user is already logged in, use currentUser
+        if (auth.currentUser && auth.currentUser.email === email) {
+            if (!auth.currentUser.emailVerified) {
+                await sendEmailVerification(auth.currentUser);
+                return;
+            }
+        }
+
+        // Otherwise sign in to get the user object
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCredential.user.emailVerified) {
+            await sendEmailVerification(userCredential.user);
+            // We don't sign out, to keep them in the "unverified" state
+        } else {
+            throw new Error("Email is already verified.");
+        }
+    } catch (error: any) {
+        throw new Error(error.message || "Failed to resend verification email.");
+    }
+  },
+
   async getUserProfile(uid: string): Promise<User | null> {
     const docRef = doc(db, 'users', uid);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data() as User;
+      const data = docSnap.data();
+      return {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          emailVerified: auth.currentUser?.emailVerified || false // Use current auth state for truth
+      };
     } else {
       return null;
     }
@@ -85,16 +122,20 @@ export const userService = {
   async deleteUserAccount(uid: string): Promise<void> {
     const firebaseUser = auth.currentUser;
     if (firebaseUser && firebaseUser.uid === uid) {
-      // Try to delete from Firestore, ignore if it fails
       try {
         await deleteDoc(doc(db, 'users', uid));
       } catch (e) {
         console.warn("Failed to delete Firestore doc", e);
       }
-      // Then delete the user from Firebase Authentication
       await firebaseUser.delete();
     } else {
       throw new Error("Cannot delete account: User not authenticated or ID mismatch.");
     }
   },
+  
+  async reloadUser(): Promise<void> {
+    if (auth.currentUser) {
+        await auth.currentUser.reload();
+    }
+  }
 };
