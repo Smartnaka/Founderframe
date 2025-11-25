@@ -83,7 +83,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </h1>
             
             <p className="text-lg md:text-2xl text-brand-100 max-w-2xl mb-12 leading-relaxed font-light">
-                FounderFrame transforms your raw ideas into structured market insights and professional pitch decks instantly using advanced Gemini Pro models.
+                FounderFrame transforms your raw ideas into structured market insights and professional pitch decks instantly using our next-generation neural strategy engine.
             </p>
             
             <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto">

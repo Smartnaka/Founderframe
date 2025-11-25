@@ -4,7 +4,13 @@ import { MarketAnalysis, Slide } from "../types";
 const getAI = (): GoogleGenAI => {
   // Use process.env.API_KEY directly as per guidelines.
   // The key's availability is handled externally.
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  let apiKey;
+  try {
+    apiKey = process.env.API_KEY;
+  } catch (e) {
+    // Ignore ReferenceError if process is not defined
+  }
+  return new GoogleGenAI({ apiKey: apiKey });
 };
 
 /**

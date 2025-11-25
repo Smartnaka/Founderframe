@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Loader2, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Loader2, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle, CheckCircle, RefreshCw, Eye, EyeOff, KeyRound } from 'lucide-react';
 
 interface AuthViewProps {
   initialMode?: 'login' | 'signup';
@@ -10,17 +10,20 @@ interface AuthViewProps {
 
 export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuccess }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  const [isReset, setIsReset] = useState(false); // Forgot Password Mode
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // New state for verification flow
   const [verificationSent, setVerificationSent] = useState(false);
+  const [resetSent, setResetSent] = useState(false); // Password reset email sent
   const [needsVerification, setNeedsVerification] = useState(false);
   
-  const { login, register, resendVerification } = useAuth();
+  const { login, register, resendVerification, resetPassword } = useAuth();
 
   const handleFirebaseError = (err: any) => {
     let friendlyMessage = "An unexpected error occurred.";
@@ -52,13 +55,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
     setIsSubmitting(true);
 
     try {
-      if (isLogin) {
+      if (isReset) {
+         // Handle Password Reset
+         if (!email) throw new Error("Please enter your email.");
+         await resetPassword(email);
+         setResetSent(true);
+      } else if (isLogin) {
         await login(email, password);
         onSuccess();
       } else {
         if (!name.trim()) throw new Error("Name is required");
         await register(name, email, password);
-        setVerificationSent(true); // Switch to success view
+        setVerificationSent(true); 
       }
     } catch (err: any) {
       handleFirebaseError(err);
@@ -112,6 +120,33 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
       );
   }
 
+  // --- SUCCESS VIEW: PASSWORD RESET SENT ---
+  if (resetSent) {
+      return (
+        <div className="min-h-full flex flex-col items-center justify-center p-4 bg-slate-50 animate-fade-in">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600">
+                    <Mail size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3">Check Your Inbox</h2>
+                <p className="text-slate-600 mb-6">
+                    We've sent password reset instructions to <span className="font-semibold text-slate-800">{email}</span>.
+                </p>
+                <button 
+                    onClick={() => {
+                        setResetSent(false);
+                        setIsReset(false);
+                        setIsLogin(true);
+                    }}
+                    className="w-full bg-slate-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                    Back to Login
+                </button>
+            </div>
+        </div>
+      );
+  }
+
   return (
     <div className="min-h-full flex flex-col items-center justify-center p-4 bg-slate-50 animate-fade-in">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
@@ -123,10 +158,12 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
           <div className="relative z-10">
             <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 border border-white/20">F</div>
             <h2 className="text-2xl font-bold text-white mb-2">
-              {isLogin ? 'Welcome back' : 'Create your account'}
+              {isReset ? 'Reset Password' : (isLogin ? 'Welcome back' : 'Create your account')}
             </h2>
             <p className="text-slate-400 text-sm">
-              {isLogin ? 'Enter your credentials to access your workspace.' : 'Start building your startup strategy today.'}
+              {isReset 
+                ? 'Enter your email to receive recovery instructions.' 
+                : (isLogin ? 'Enter your credentials to access your workspace.' : 'Start building your startup strategy today.')}
             </p>
           </div>
         </div>
@@ -152,7 +189,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
               </div>
             )}
 
-            {!isLogin && (
+            {!isLogin && !isReset && (
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Full Name</label>
                 <div className="relative">
@@ -163,7 +200,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
                     placeholder="John Doe"
-                    required={!isLogin}
+                    required={!isLogin && !isReset}
                   />
                 </div>
               </div>
@@ -184,21 +221,42 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
+            {!isReset && (
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all"
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none p-1"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {isLogin && (
+                    <div className="flex justify-end mt-1">
+                        <button 
+                            type="button"
+                            onClick={() => { setIsReset(true); setError(''); }}
+                            className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        >
+                            Forgot Password?
+                        </button>
+                    </div>
+                )}
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -209,29 +267,38 @@ export const AuthView: React.FC<AuthViewProps> = ({ initialMode = 'login', onSuc
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
-                  <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
-                  <ArrowRight size={18} />
+                  <span>{isReset ? 'Send Recovery Email' : (isLogin ? 'Sign In' : 'Create Account')}</span>
+                  {isReset ? <Mail size={18} /> : <ArrowRight size={18} />}
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-100 text-center">
-            <p className="text-slate-600 text-sm">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError('');
-                  setEmail('');
-                  setPassword('');
-                  setNeedsVerification(false);
-                }}
-                className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
-              >
-                {isLogin ? 'Sign up' : 'Log in'}
-              </button>
-            </p>
+             {isReset ? (
+                <button
+                    onClick={() => { setIsReset(false); setError(''); }}
+                    className="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center justify-center mx-auto"
+                >
+                    <ArrowRight size={14} className="rotate-180 mr-1"/> Back to Login
+                </button>
+             ) : (
+                <p className="text-slate-600 text-sm">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <button
+                    onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError('');
+                    setEmail('');
+                    setPassword('');
+                    setNeedsVerification(false);
+                    }}
+                    className="text-brand-600 font-semibold hover:text-brand-700 transition-colors"
+                >
+                    {isLogin ? 'Sign up' : 'Log in'}
+                </button>
+                </p>
+             )}
           </div>
         </div>
       </div>

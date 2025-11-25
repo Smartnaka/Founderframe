@@ -1,5 +1,5 @@
 
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendEmailVerification, User as FirebaseAuthUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile, sendEmailVerification, sendPasswordResetEmail, User as FirebaseAuthUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { User } from '../types';
@@ -95,6 +95,14 @@ export const userService = {
         }
     } catch (error: any) {
         throw new Error(error.message || "Failed to resend verification email.");
+    }
+  },
+
+  async resetPassword(email: string): Promise<void> {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to send password reset email.");
     }
   },
 

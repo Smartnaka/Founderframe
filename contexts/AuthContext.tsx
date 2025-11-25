@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   resendVerification: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   checkVerification: () => Promise<boolean>;
   logout: () => void;
   deleteAccount: (uid: string) => Promise<void>;
@@ -86,6 +87,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+        await userService.resetPassword(email);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
   const checkVerification = async (): Promise<boolean> => {
       if (auth.currentUser) {
           await userService.reloadUser();
@@ -113,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, resendVerification, checkVerification, logout, deleteAccount }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, resendVerification, resetPassword, checkVerification, logout, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   );
