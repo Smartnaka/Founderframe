@@ -1,10 +1,17 @@
 
 export enum AppStep {
   LANDING = 'LANDING',
+  AUTH = 'AUTH',
   IDEA = 'IDEA',
   INSIGHTS = 'INSIGHTS',
   PITCH = 'PITCH',
   EXPORT = 'EXPORT'
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface MarketSize {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppStep, StartupState, Slide, PitchTheme } from './types';
 import { analyzeStartupIdea, generatePitchDeck, generateSlideImage } from './services/gemini';
@@ -7,6 +8,8 @@ import { MarketInsights } from './views/MarketInsights';
 import { PitchBuilder } from './views/PitchBuilder';
 import { ExportView } from './views/Export';
 import { LandingPage } from './views/LandingPage';
+import { AuthView } from './views/AuthView';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { AlertTriangle, Key, Settings, ZapOff } from 'lucide-react';
 
 const DEFAULT_THEME: PitchTheme = {
@@ -17,13 +20,17 @@ const DEFAULT_THEME: PitchTheme = {
   font: 'Inter, sans-serif'
 };
 
-export default function App() {
+const AppContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.LANDING);
   const [completedSteps, setCompletedSteps] = useState<AppStep[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [needsApiKey, setNeedsApiKey] = useState(false);
   const [configError, setConfigError] = useState(false);
   const [quotaError, setQuotaError] = useState(false);
+  
+  // Auth State
+  const { user, logout } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
 
   const [state, setState] = useState<StartupState>({
     ideaRaw: '',
@@ -268,13 +275,47 @@ export default function App() {
       setCurrentStep(step);
   };
 
+  // Auth Handling
   const handleGetStarted = () => {
-      if (needsApiKey) {
-          // If key is missing, trigger selection instead of navigation
-          handleConnectKey();
-      } else {
-          setCurrentStep(AppStep.IDEA);
+      if (needsApiKey && !user) {
+        handleConnectKey();
+        return;
       }
+
+      if (user) {
+        setCurrentStep(AppStep.IDEA);
+      } else {
+        setAuthMode('signup');
+        setCurrentStep(AppStep.AUTH);
+      }
+  };
+
+  const handleLoginClick = () => {
+    if (user) {
+        setCurrentStep(AppStep.IDEA);
+    } else {
+        setAuthMode('login');
+        setCurrentStep(AppStep.AUTH);
+    }
+  };
+
+  const handleAuthSuccess = () => {
+      if (needsApiKey) {
+        handleConnectKey();
+      }
+      setCurrentStep(AppStep.IDEA);
+  };
+
+  const handleLogout = () => {
+      logout();
+      setCurrentStep(AppStep.LANDING);
+      // Reset state if desired
+      setState(prev => ({
+          ...prev,
+          ideaRaw: '',
+          analysis: null,
+          pitchDeck: []
+      }));
   };
 
   // Render blocking API Key view if needed and we are trying to use the app
@@ -306,7 +347,7 @@ export default function App() {
     }
 
     // 2. AI Studio Case: API Key Selection UI
-    if (needsApiKey && currentStep !== AppStep.LANDING) {
+    if (needsApiKey && currentStep !== AppStep.LANDING && currentStep !== AppStep.AUTH) {
       return (
         <div className="absolute inset-0 z-50 bg-slate-50/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
           <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
@@ -370,8 +411,12 @@ export default function App() {
   if (currentStep === AppStep.LANDING) {
     return (
         <>
-            <LandingPage onGetStarted={handleGetStarted} />
-            {needsApiKey && (
+            <LandingPage 
+              onGetStarted={handleGetStarted} 
+              onLogin={handleLoginClick}
+              user={user}
+            />
+            {needsApiKey && !user && (
                 <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
                     <button 
                         onClick={handleConnectKey}
@@ -403,6 +448,8 @@ export default function App() {
             currentStep={currentStep} 
             completedSteps={completedSteps} 
             onStepClick={handleStepClick}
+            user={user}
+            onLogout={handleLogout}
         />
       )}
 
@@ -411,9 +458,17 @@ export default function App() {
         {renderApiKeyOverlay()}
 
         {/* Scrollable Container for standard content pages */}
-        {(currentStep === AppStep.IDEA || currentStep === AppStep.INSIGHTS || currentStep === AppStep.EXPORT) && (
+        {(currentStep === AppStep.AUTH || currentStep === AppStep.IDEA || currentStep === AppStep.INSIGHTS || currentStep === AppStep.EXPORT) && (
             <div id="main-scroll-container" className="h-full w-full overflow-y-auto">
                 <div className="min-h-full flex flex-col">
+                    
+                    {currentStep === AppStep.AUTH && (
+                      <AuthView 
+                        initialMode={authMode} 
+                        onSuccess={handleAuthSuccess} 
+                      />
+                    )}
+
                     {currentStep === AppStep.IDEA && (
                     <IdeaInput 
                         initialIdea={state.ideaRaw} 
@@ -439,9 +494,11 @@ export default function App() {
                     />
                     )}
                     
-                    <footer className="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto">
-                        <p>© {new Date().getFullYear()} FounderFrame. Powered by Gemini.</p>
-                    </footer>
+                    {currentStep !== AppStep.AUTH && (
+                      <footer className="py-6 text-center text-slate-400 text-sm border-t border-slate-200 mt-auto">
+                          <p>© {new Date().getFullYear()} FounderFrame. Powered by Gemini.</p>
+                      </footer>
+                    )}
                 </div>
             </div>
         )}
@@ -463,5 +520,14 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+};
+
+// Wrap main app in AuthProvider
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

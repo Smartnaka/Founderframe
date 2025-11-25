@@ -1,8 +1,12 @@
+
 import React, { useState } from 'react';
-import { ArrowRight, TrendingUp, Layout, PieChart, Zap, Rocket, Star, ChevronDown, ChevronUp, Lightbulb, PlayCircle, Hexagon } from 'lucide-react';
+import { ArrowRight, TrendingUp, Layout, PieChart, Zap, Rocket, Star, ChevronDown, ChevronUp, Lightbulb, PlayCircle, Hexagon, LogIn, LayoutDashboard } from 'lucide-react';
+import { User } from '../types';
 
 interface LandingPageProps {
   onGetStarted: () => void;
+  onLogin: () => void;
+  user: User | null;
 }
 
 const FaqItem = ({ question, answer }: { question: string, answer: string }) => {
@@ -23,7 +27,7 @@ const FaqItem = ({ question, answer }: { question: string, answer: string }) => 
   );
 };
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, user }) => {
   return (
     <div className="h-full overflow-y-auto flex flex-col bg-white animate-fade-in font-sans">
       {/* Hero Section with Gradient */}
@@ -41,12 +45,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white font-bold text-xl border border-white/30">F</div>
                 <span className="font-bold text-white text-lg tracking-tight">FounderFrame</span>
             </div>
-            <button 
-                onClick={onGetStarted}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm font-medium transition-all"
-            >
-                Log In
-            </button>
+            
+            {user ? (
+              <div className="flex items-center space-x-4">
+                 <span className="hidden md:inline font-medium text-brand-100">Hi, {user.name}</span>
+                 <button 
+                    onClick={onGetStarted}
+                    className="px-5 py-2 bg-white text-brand-700 hover:bg-brand-50 rounded-lg text-sm font-bold transition-all flex items-center space-x-2 shadow-lg"
+                >
+                    <LayoutDashboard size={16} />
+                    <span>Dashboard</span>
+                </button>
+              </div>
+            ) : (
+              <button 
+                  onClick={onLogin}
+                  className="px-5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-sm font-medium transition-all flex items-center space-x-2"
+              >
+                  <LogIn size={16} />
+                  <span>Log In</span>
+              </button>
+            )}
         </div>
 
         <div className="max-w-5xl mx-auto px-4 pt-32 pb-24 md:pt-48 md:pb-32 relative z-10 flex flex-col items-center text-center">
@@ -72,7 +91,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                     onClick={onGetStarted}
                     className="w-full md:w-auto group flex items-center justify-center space-x-3 bg-white text-brand-700 hover:bg-brand-50 px-8 py-4 rounded-full text-lg font-bold transition-all shadow-[0_20px_50px_-12px_rgba(255,255,255,0.3)] hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.5)] transform hover:-translate-y-1"
                 >
-                    <span>Start Building Now</span>
+                    <span>{user ? 'Continue to Dashboard' : 'Start Building Free'}</span>
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
                 </button>
                 <button className="w-full md:w-auto flex items-center justify-center space-x-2 px-8 py-4 rounded-full text-lg font-medium text-white border border-white/20 hover:bg-white/10 transition-all">
@@ -284,7 +303,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 onClick={onGetStarted}
                 className="bg-slate-900 text-white px-10 py-5 rounded-full text-xl font-bold hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
             >
-                Start Your Journey
+                {user ? 'Continue to Dashboard' : 'Start Your Journey'}
             </button>
         </div>
       </div>

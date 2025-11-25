@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     define: {
       // Expose API_KEY to the client-side code as process.env.API_KEY
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
+      // Firebase config values are directly imported via ES modules and don't need `define` for client-side use
     },
   };
 });
