@@ -205,9 +205,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             <h2 className="text-3xl md:text-4xl font-bold text-center text-slate-900 mb-16">Don't just take our word for it</h2>
             <div className="grid md:grid-cols-3 gap-8">
                 {[
-                    { quote: "I went from a vague idea to a structured pitch deck in 15 minutes. This tool is a cheat code.", author: "Sarah Jenkins", role: "Founder, EcoEats", initials: "SJ", color: "bg-orange-100 text-orange-700" },
-                    { quote: "The market sizing analysis was surprisingly accurate. It saved me weeks of manual research.", author: "David Chen", role: "Product Manager", initials: "DC", color: "bg-blue-100 text-blue-700" },
-                    { quote: "Finally, a tool that focuses on the business strategy, not just pretty slides.", author: "Elena Rodriguez", role: "Serial Entrepreneur", initials: "ER", color: "bg-purple-100 text-purple-700" }
+                    { 
+                        quote: "I went from a vague idea to a structured pitch deck in 15 minutes. This tool is a cheat code.", 
+                        author: "Sarah Anyanwu", 
+                        role: "Founder, EcoEats", 
+                        image: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=150&q=80"
+                    },
+                    { 
+                        quote: "The market sizing analysis was surprisingly accurate. It saved me weeks of manual research.", 
+                        author: "David Okafor", 
+                        role: "Product Manager", 
+                        image: "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&w=150&q=80" 
+                    },
+                    { 
+                        quote: "Finally, a tool that focuses on the business strategy, not just pretty slides.", 
+                        author: "Zainab Diallo", 
+                        role: "Serial Entrepreneur", 
+                        image: "https://images.unsplash.com/photo-1589156280159-27698a70f29e?auto=format&fit=crop&w=150&q=80" 
+                    }
                 ].map((t, i) => (
                     <div key={i} className="bg-slate-50 p-8 rounded-2xl border border-slate-100 relative hover:shadow-lg transition-shadow">
                         <div className="flex text-amber-400 mb-4 space-x-1">
@@ -215,7 +230,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                         </div>
                         <p className="text-slate-700 italic mb-6 text-lg leading-relaxed">"{t.quote}"</p>
                         <div className="flex items-center mt-auto">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3 ${t.color}`}>{t.initials}</div>
+                            <img 
+                                src={t.image} 
+                                alt={t.author} 
+                                className="w-10 h-10 rounded-full object-cover mr-3 border border-slate-200 shadow-sm"
+                            />
                             <div>
                                 <div className="font-bold text-slate-900">{t.author}</div>
                                 <div className="text-sm text-slate-500">{t.role}</div>
